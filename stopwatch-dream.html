@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aurora Rain</title>
+<style>
+  :root { --bg:#e6e8ec; --text:#555b6e; --sub:#8a90a2; --line:rgba(100,106,125,.32); }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; }
+  body {
+    background:var(--bg); color:var(--text); overflow-x:hidden;
+    font-family:"Segoe UI Light","Segoe UI",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+    display:flex; align-items:center; justify-content:center; padding:16px;
+  }
+  /* 몽환적인 오로라 안개 (배경은 라이트 그레이 유지) */
+  .blob { position:fixed; border-radius:50%; filter:blur(90px); opacity:.5; pointer-events:none; z-index:0; }
+  .b1 { width:52vmax; height:52vmax; left:-14vmax; top:-16vmax; background:#bdf3e6; animation:f1 34s ease-in-out infinite alternate; }
+  .b2 { width:46vmax; height:46vmax; right:-12vmax; top:8vmax;  background:#cfc0ff; animation:f2 41s ease-in-out infinite alternate; }
+  .b3 { width:50vmax; height:50vmax; left:14vmax; bottom:-24vmax; background:#ffcce8; animation:f3 37s ease-in-out infinite alternate; }
+  @keyframes f1 { to { transform:translate(10vmax,8vmax) scale(1.12); } }
+  @keyframes f2 { to { transform:translate(-9vmax,10vmax) scale(.92); } }
+  @keyframes f3 { to { transform:translate(8vmax,-9vmax) scale(1.1); } }
+
+  main { position:relative; z-index:1; width:100%; max-width:640px; text-align:center; }
+  .clock { font-size:clamp(48px,13vw,76px); font-weight:300; letter-spacing:.14em; padding-left:.14em; font-variant-numeric:tabular-nums; }
+  .sub { margin-top:4px; font-size:14px; letter-spacing:.2em; color:var(--sub); min-height:1.4em; }
+  canvas { display:block; width:100%; height:auto; margin:6px auto 0; }
+  .btns { display:flex; gap:14px; justify-content:center; margin-top:4px; }
+  button {
+    min-width:112px; padding:11px 26px; font:inherit; font-size:15px; letter-spacing:.18em; color:var(--text);
+    background:rgba(255,255,255,.4); border:1px solid var(--line); border-radius:999px; cursor:pointer;
+    backdrop-filter:blur(6px); transition:background .4s, opacity .4s;
+  }
+  button:hover { background:rgba(255,255,255,.7); }
+  button:disabled { opacity:.35; cursor:default; }
+  .hint { margin-top:16px; font-size:12px; letter-spacing:.12em; color:var(--sub); }
+
+  /* 추상 배경 이펙트 */
+  .ring { position:fixed; border-radius:50%; pointer-events:none; z-index:0; opacity:.45; filter:blur(1px);
+    background:conic-gradient(from 0deg, rgba(140,240,225,0), rgba(140,240,225,.55), rgba(170,150,255,.5), rgba(255,170,225,.45), rgba(140,240,225,0));
+    -webkit-mask:radial-gradient(circle, transparent 62%, #000 63%, #000 66%, transparent 67%);
+            mask:radial-gradient(circle, transparent 62%, #000 63%, #000 66%, transparent 67%); }
+  .r1 { width:70vmax; height:70vmax; left:-20vmax; top:-25vmax; animation:spin 60s linear infinite; }
+  .r2 { width:55vmax; height:55vmax; right:-18vmax; bottom:-20vmax; animation:spin 80s linear infinite reverse; }
+  .r3 { width:34vmax; height:34vmax; right:8vmax; top:6vmax; opacity:.3; animation:spin 45s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .orb { position:fixed; border-radius:50%; pointer-events:none; z-index:0; filter:blur(28px); opacity:.55; mix-blend-mode:multiply; }
+  .o1 { width:16vmax; height:16vmax; background:#c9f5ec; left:12vw; top:60vh; animation:drift1 28s ease-in-out infinite alternate; }
+  .o2 { width:12vmax; height:12vmax; background:#ddd2ff; left:70vw; top:20vh; animation:drift2 33s ease-in-out infinite alternate; }
+  .o3 { width:10vmax; height:10vmax; background:#ffd8ee; left:40vw; top:10vh; animation:drift3 25s ease-in-out infinite alternate; }
+  @keyframes drift1 { to { transform:translate(22vw,-30vh) scale(1.3); } }
+  @keyframes drift2 { to { transform:translate(-30vw,40vh) scale(.8); } }
+  @keyframes drift3 { to { transform:translate(18vw,55vh) scale(1.2); } }
+  .grain { position:fixed; inset:-50%; pointer-events:none; z-index:0; opacity:.06;
+    background-image:radial-gradient(rgba(80,90,120,.9) 1px, transparent 1px); background-size:3px 3px; animation:grain 8s steps(8) infinite; }
+  @keyframes grain { to { transform:translate(3%,2%); } }
+  @media (prefers-reduced-motion: reduce) { .ring,.orb,.grain,.blob { animation:none; } }
+</style>
+</head>
+<body>
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+<div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div>
+<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div><div class="grain"></div>
+<main>
+  <div class="clock" id="clock">00:00</div>
+  <div class="sub" id="sub">빗방울 0 / 60</div>
+  <canvas id="c" aria-label="빗물이 양동이에 차오르는 스톱워치"></canvas>
+  <div class="btns">
+    <button id="toggle">시작</button>
+    <button id="reset" disabled>초기화</button>
+  </div>
+  <div class="hint">3초에 한 방울 · 3분이면 양동이가 가득 차요 · Space 시작/정지 · R 초기화</div>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const cv = $('c'), ctx = cv.getContext('2d');
+  const W = 640, H = 560, S = 2;
+  cv.width = W * S; cv.height = H * S;
+
+  // ── 타이밍 (ms, 한 사이클 안에서) ──
+  const DROP_EVERY = 3000, DROPS = 60, FALL = 1400, RISE = 800;
+  const TILT_START = 182200, TILT_DUR = 4000;
+  const FADE_START = 189000, FADE_DUR = 2500, CYCLE = 192000;
+
+  // ── 양동이 기하 (오른쪽 아래 모서리가 회전축) ──
+  const GY = 470, PX = 385, CX = PX - 65, HFULL = 164, MAX_TILT = 84 * Math.PI / 180;
+  const OUTER = [{x:0,y:0},{x:-130,y:0},{x:-150,y:-190},{x:20,y:-190}];
+  const INNER = [{x:-4,y:-4},{x:-126,y:-4},{x:-144,y:-186},{x:14,y:-186}];
+
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const smooth = x => x * x * (3 - 2 * x);
+  const easeOut = x => 1 - Math.pow(1 - x, 3);
+  const easeIO = x => 0.5 - 0.5 * Math.cos(Math.PI * x);
+
+  const xf = (p, th) => { const c = Math.cos(th), s = Math.sin(th); return { x: PX + p.x * c - p.y * s, y: GY + p.x * s + p.y * c }; };
+
+  function areaBelow(poly, L) {
+    const out = [];
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i], b = poly[(i + 1) % poly.length], ai = a.y >= L, bi = b.y >= L;
+      if (ai) out.push(a);
+      if (ai !== bi) { const t = (L - a.y) / (b.y - a.y); out.push({ x: a.x + t * (b.x - a.x), y: L }); }
+    }
+    let s = 0;
+    for (let i = 0; i < out.length; i++) { const a = out[i], b = out[(i + 1) % out.length]; s += a.x * b.y - b.x * a.y; }
+    return Math.abs(s) / 2;
+  }
+  const V0 = areaBelow(INNER.map(p => xf(p, 0)), GY - 4 - HFULL);
+
+  function fracAt(tc) {
+    const k = Math.min(DROPS, Math.floor(tc / DROP_EVERY));
+    if (k < 1) return 0;
+    return ((k - 1) + smooth(clamp((tc - DROP_EVERY * k) / RISE))) / DROPS;
+  }
+  const tiltAt = tc => easeIO(clamp((tc - TILT_START) / TILT_DUR));
+
+  function waterState(tc) {
+    const tl = tiltAt(tc), th = tl * MAX_TILT, frac = fracAt(tc);
+    const pts = INNER.map(p => xf(p, th));
+    if (tl === 0) return { tl, th, pts, L: GY - 4 - HFULL * frac, A: V0 * frac, frac };
+    let lo = Math.min(...pts.map(p => p.y)), hi = Math.max(...pts.map(p => p.y));
+    for (let i = 0; i < 28; i++) { const m = (lo + hi) / 2; if (areaBelow(pts, m) > V0) lo = m; else hi = m; }
+    const L = Math.max((lo + hi) / 2, pts[2].y, pts[3].y);
+    return { tl, th, pts, L, A: areaBelow(pts, L), frac: 1 };
+  }
+
+  function dropPath(x, y, r) {
+    ctx.beginPath();
+    ctx.moveTo(x, y - r * 2.6);
+    ctx.bezierCurveTo(x + r * .3, y - r * 1.5, x + r, y - r * .7, x + r, y);
+    ctx.arc(x, y, r, 0, Math.PI, false);
+    ctx.bezierCurveTo(x - r, y - r * .7, x - r * .3, y - r * 1.5, x, y - r * 2.6);
+    ctx.closePath();
+  }
+  const PAL = [['#8af5e4', '#7aa2ff', '#c58bff'], ['#9dfad0', '#7fb6ff', '#e49bff'], ['#a6f0ff', '#8d95ff', '#ff9ad6']];
+
+  function draw(t, amb) {
+    const cyc = Math.floor(t / CYCLE), tc = t - cyc * CYCLE;
+    const alpha = clamp(tc / 1500) * (1 - clamp((tc - FADE_START) / FADE_DUR));
+    const st = waterState(tc);
+    const camX = -90 * st.tl;
+    const world = () => ctx.setTransform(S, 0, 0, S, S * camX, 0);
+
+    ctx.setTransform(S, 0, 0, S, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    world();
+    ctx.globalAlpha = alpha;
+
+    // 바닥 그림자 + 오로라 헤일로
+    ctx.fillStyle = 'rgba(80,90,115,.13)';
+    ctx.beginPath(); ctx.ellipse(CX, GY + 5, 92, 8, 0, 0, 7); ctx.fill();
+    const halo = ctx.createRadialGradient(CX, 380, 10, CX, 380, 230);
+    halo.addColorStop(0, `rgba(150,140,255,${0.05 + 0.2 * st.frac})`);
+    halo.addColorStop(1, 'rgba(150,140,255,0)');
+    ctx.fillStyle = halo; ctx.fillRect(CX - 300, 0, 600, H);
+
+    // 쏟아진 물
+    const spilled = tc >= TILT_START ? clamp((V0 - st.A) / V0) : 0;
+    if (spilled > 0.002) {
+      const sp = Math.sqrt(spilled), pcx = PX + 150, rx = 150 * sp, ry = 3 + 9 * sp;
+      const g = ctx.createLinearGradient(pcx - rx, 0, pcx + rx, 0);
+      g.addColorStop(0, 'rgba(125,235,225,0)'); g.addColorStop(.25, 'rgba(125,235,225,.65)');
+      g.addColorStop(.55, 'rgba(130,160,255,.7)'); g.addColorStop(.8, 'rgba(200,140,255,.65)');
+      g.addColorStop(1, 'rgba(255,150,220,0)');
+      ctx.save();
+      ctx.shadowColor = 'rgba(140,130,255,.5)'; ctx.shadowBlur = 22 * S;
+      ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(pcx, GY + 3, rx, ry, 0, 0, 7); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = `rgba(255,255,255,${0.35 * sp})`; ctx.lineWidth = 1.2;
+      const br = 0.72 + 0.05 * Math.sin(amb * 0.8);
+      ctx.beginPath(); ctx.ellipse(pcx, GY + 3, rx * br, ry * 0.62, 0, 0, 7); ctx.stroke();
+    }
+
+    // 쏟아지는 물줄기
+    if (tc >= TILT_START) {
+      const prev = waterState(Math.max(0, tc - 120)).A;
+      const rate = Math.max(0, (prev - st.A) / 0.12), rim = st.pts[3];
+      if (rate > 20 && rim.y < GY - 2) {
+        const w = clamp(Math.sqrt(rate) * 0.15, 0, 14);
+        const g = ctx.createLinearGradient(0, rim.y, 0, GY);
+        g.addColorStop(0, 'rgba(125,235,225,.85)'); g.addColorStop(1, 'rgba(190,140,255,.75)');
+        ctx.save();
+        ctx.strokeStyle = g; ctx.lineWidth = w; ctx.lineCap = 'round';
+        ctx.shadowColor = 'rgba(140,130,255,.55)'; ctx.shadowBlur = 14 * S;
+        ctx.beginPath(); ctx.moveTo(rim.x, rim.y);
+        for (let i = 1; i <= 16; i++) { const u = i / 16; ctx.lineTo(rim.x + 26 * u * u, rim.y + (GY - rim.y) * u); }
+        ctx.stroke(); ctx.restore();
+      }
+    }
+
+    // 양동이 (회전) — 3D 펄 글라스 원통
+    const bodyPath = () => { const P = new Path2D(); P.moveTo(-150,-190); P.lineTo(-130,0); P.ellipse(-65,0,65,11,0,Math.PI,0,true); P.lineTo(20,-190); P.ellipse(-65,-190,85,14,0,0,Math.PI,true); P.closePath(); return P; };
+    ctx.save();
+    ctx.translate(PX, GY); ctx.rotate(st.th);
+    const body = bodyPath();
+    ctx.save(); ctx.shadowColor = 'rgba(70,80,110,.18)'; ctx.shadowBlur = 30 * S; ctx.shadowOffsetY = 8 * S;
+    const bg = ctx.createLinearGradient(-150, 0, 20, 0);
+    bg.addColorStop(0, 'rgba(170,176,196,.55)'); bg.addColorStop(.18, 'rgba(255,255,255,.62)'); bg.addColorStop(.45, 'rgba(236,238,245,.38)');
+    bg.addColorStop(.82, 'rgba(196,200,216,.42)'); bg.addColorStop(1, 'rgba(150,156,178,.6)');
+    ctx.fillStyle = bg; ctx.fill(body); ctx.restore();
+    // 안쪽 뒷벽 (입구 타원)
+    const ig = ctx.createLinearGradient(0, -204, 0, -176);
+    ig.addColorStop(0, 'rgba(150,156,178,.45)'); ig.addColorStop(1, 'rgba(235,237,244,.25)');
+    ctx.fillStyle = ig; ctx.beginPath(); ctx.ellipse(-65,-190,82,12.5,0,0,7); ctx.fill();
+    ctx.restore();
+
+    // 물 (양동이 안쪽으로 클리핑)
+    if (st.frac > 0.001 || st.tl > 0) {
+      ctx.save();
+      ctx.translate(PX, GY); ctx.rotate(st.th);
+      ctx.clip(bodyPath());
+      world();
+      const L = st.L, amp = 1.6 * (1 - st.tl);
+      const wg = ctx.createLinearGradient(0, L, 0, L + 170);
+      wg.addColorStop(0, 'rgba(125,238,226,.8)'); wg.addColorStop(.5, 'rgba(124,164,255,.8)'); wg.addColorStop(1, 'rgba(194,134,255,.85)');
+      ctx.fillStyle = wg;
+      ctx.beginPath(); ctx.moveTo(0, GY + 60);
+      for (let x = 0; x <= W + 8; x += 8) ctx.lineTo(x, L + amp * Math.sin(x * 0.045 + amb * 0.9));
+      ctx.lineTo(W + 8, GY + 60); ctx.closePath(); ctx.fill();
+      // 흐르는 오로라빛
+      const bx = CX + 90 * Math.sin(amb * 0.35), bx2 = CX - 80 * Math.sin(amb * 0.27 + 1);
+      let sh = ctx.createLinearGradient(bx - 70, 0, bx + 70, 0);
+      sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(.5, 'rgba(255,255,255,.3)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = sh; ctx.fillRect(0, L, W, GY - L + 60);
+      sh = ctx.createLinearGradient(bx2 - 60, 0, bx2 + 60, 0);
+      sh.addColorStop(0, 'rgba(255,150,220,0)'); sh.addColorStop(.5, 'rgba(255,150,220,.28)'); sh.addColorStop(1, 'rgba(255,150,220,0)');
+      ctx.fillStyle = sh; ctx.fillRect(0, L, W, GY - L + 60);
+      // 수면 (3D 타원)
+      if (st.tl === 0) {
+        const hh = clamp((GY - L) / 190), hw = 63 + 20 * hh, hry = 10 + 2.5 * hh;
+        const sg = ctx.createLinearGradient(CX - hw, 0, CX + hw, 0);
+        sg.addColorStop(0, 'rgba(170,250,236,.95)'); sg.addColorStop(.35 + .15 * Math.sin(amb * .4), 'rgba(196,186,255,.95)');
+        sg.addColorStop(.7, 'rgba(255,196,236,.9)'); sg.addColorStop(1, 'rgba(160,210,255,.95)');
+        ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(CX, L, hw, hry, 0, 0, 7); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.2; ctx.stroke();
+      } else {
+        ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(0, L); ctx.lineTo(W, L); ctx.stroke();
+      }
+      // 물결 + 착수 빛
+      const k = Math.floor(tc / DROP_EVERY);
+      if (st.tl === 0 && k >= 1 && k <= DROPS) {
+        const age = tc - DROP_EVERY * k;
+        if (age < 2000) {
+          const u = age / 2000, rx = 6 + 62 * easeOut(u);
+          ctx.strokeStyle = `rgba(255,255,255,${0.8 * (1 - u)})`; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.ellipse(CX, L, rx, rx * .16, 0, 0, 7); ctx.stroke();
+          ctx.strokeStyle = `rgba(170,140,255,${0.6 * (1 - u)})`; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.ellipse(CX, L, rx * .6, rx * .1, 0, 0, 7); ctx.stroke();
+          if (age < 700) {
+            const gl = ctx.createRadialGradient(CX, L, 0, CX, L, 46), a = 0.55 * (1 - age / 700);
+            gl.addColorStop(0, `rgba(255,255,255,${a})`); gl.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = gl; ctx.fillRect(CX - 50, L - 50, 100, 100);
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    // 양동이 앞면 글라스·림
+    ctx.save();
+    ctx.translate(PX, GY); ctx.rotate(st.th);
+    const fg = ctx.createLinearGradient(-150, 0, 20, 0);
+    fg.addColorStop(0, 'rgba(120,128,152,.28)'); fg.addColorStop(.12, 'rgba(255,255,255,0)'); fg.addColorStop(.2, 'rgba(255,255,255,.55)');
+    fg.addColorStop(.27, 'rgba(255,255,255,0)'); fg.addColorStop(.85, 'rgba(255,255,255,0)'); fg.addColorStop(1, 'rgba(110,118,142,.3)');
+    ctx.fillStyle = fg; ctx.fill(bodyPath());
+    ctx.strokeStyle = 'rgba(120,126,148,.35)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-150,-190); ctx.lineTo(-130,0); ctx.ellipse(-65,0,65,11,0,Math.PI,0,true); ctx.lineTo(20,-190); ctx.stroke();
+    // 림 (두께감 있는 금속 링)
+    const rg = ctx.createLinearGradient(-150, 0, 20, 0);
+    rg.addColorStop(0, '#a9aec0'); rg.addColorStop(.25, '#ffffff'); rg.addColorStop(.6, '#d6d9e4'); rg.addColorStop(1, '#9aa0b4');
+    ctx.strokeStyle = rg; ctx.lineWidth = 3.2;
+    ctx.beginPath(); ctx.ellipse(-65,-190,84,13.5,0,0,7); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(-65,-190,84,13.5,0,0.15,Math.PI-0.15); ctx.stroke();
+    ctx.restore();
+
+    // 떨어지는 빗방울
+    const k = Math.floor(tc / DROP_EVERY) + 1;
+    if (k <= DROPS) {
+      const u = (tc - (DROP_EVERY * k - FALL)) / FALL;
+      if (u >= 0 && u < 1) {
+        const r = 7, yLand = GY - 4 - HFULL * (k - 1) / DROPS - r, y = -30 + (yLand + 30) * u * u;
+        const a = clamp(u * FALL / 350), p = PAL[k % 3];
+        ctx.save(); ctx.globalAlpha = alpha * a;
+        const tr = ctx.createLinearGradient(0, y - 2.6 * r - 60 * u, 0, y - 2.6 * r);
+        tr.addColorStop(0, 'rgba(150,140,255,0)'); tr.addColorStop(1, 'rgba(150,140,255,.3)');
+        ctx.strokeStyle = tr; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(CX, y - 2.6 * r - 60 * u); ctx.lineTo(CX, y - 2.6 * r); ctx.stroke();
+        const g = ctx.createLinearGradient(0, y - 2.6 * r, 0, y + r);
+        g.addColorStop(0, p[0]); g.addColorStop(.55, p[1]); g.addColorStop(1, p[2]);
+        ctx.shadowColor = 'rgba(140,120,255,.7)'; ctx.shadowBlur = 18 * S;
+        ctx.fillStyle = g; dropPath(CX, y, r); ctx.fill();
+        ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(255,255,255,.7)';
+        ctx.beginPath(); ctx.ellipse(CX - r * .35, y - r * .1, r * .18, r * .38, .3, 0, 7); ctx.fill();
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+    return { cyc, n: Math.min(DROPS, Math.floor(tc / DROP_EVERY)) };
+  }
+
+  // ── 상태 / HUD ──
+  let running = false, startTs = 0, elapsed = 0, lastTxt = '';
+  const clockEl = $('clock'), subEl = $('sub'), tog = $('toggle'), rst = $('reset');
+
+  function frame(now) {
+    const t = elapsed + (running ? now - startTs : 0);
+    const info = draw(t, now / 1000);
+    const sec = Math.floor(t / 1000), p = n => String(n).padStart(2, '0');
+    const c = p(Math.floor(sec / 60)) + ':' + p(sec % 60);
+    const s = `빗방울 ${info.n} / ${DROPS}` + (info.cyc ? ` · 넘침 ${info.cyc}회` : '');
+    if (c + s !== lastTxt) { lastTxt = c + s; clockEl.textContent = c; subEl.textContent = s; }
+    requestAnimationFrame(frame);
+  }
+  function toggle() {
+    if (running) { elapsed += performance.now() - startTs; running = false; tog.textContent = elapsed ? '계속' : '시작'; }
+    else { startTs = performance.now(); running = true; tog.textContent = '일시정지'; rst.disabled = false; }
+  }
+  function reset() { running = false; elapsed = 0; tog.textContent = '시작'; rst.disabled = true; }
+  tog.onclick = toggle; rst.onclick = reset;
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space') { e.preventDefault(); toggle(); }
+    else if (e.key.toLowerCase() === 'r' && !rst.disabled) reset();
+  });
+  requestAnimationFrame(frame);
+  window.__seek = ms => { elapsed = ms; running = false; };
+})();
+</script>
+</body>
+</html>
